@@ -59,8 +59,9 @@ final class IslandModel {
     var maximumSize: CGSize { size(for: .expanded) }
 
     /// Width of the fish's lane right of the notch while recording. On a notched display it's wide
-    /// enough to cover the menu bar next to the notch, where macOS shows its microphone indicator.
-    var swimLane: CGFloat { hasNotch ? 136 : Self.side }
+    /// enough to cover the menu bar next to the notch, where macOS shows its microphone indicator
+    /// and the nearest tray icons.
+    var swimLane: CGFloat { hasNotch ? 230 : Self.side }
 
     func size(for mode: Mode) -> CGSize {
         switch mode {
@@ -589,8 +590,8 @@ private struct SwimmingFish: View {
     let reduceMotion: Bool
 
     private static let size: CGFloat = 22
-    /// Seconds for one lap there and back.
-    private static let lap: Double = 8
+    /// Seconds for one lap there and back: at least 8, and longer in a wide lane so the fish doesn't speed up.
+    private static func lap(travel: CGFloat) -> Double { max(8, 8 * travel / 47) }
 
     var body: some View {
         let level = levels.suffix(3).reduce(0, +) / 3
@@ -600,7 +601,8 @@ private struct SwimmingFish: View {
             let travel = max(0, (proxy.size.width - Self.size) / 2)
             TimelineView(.animation(paused: still)) { context in
                 let time = context.date.timeIntervalSinceReferenceDate
-                let angle = 2 * .pi * time / Self.lap
+                let angle = 2 * .pi * time / Self.lap(travel: travel)
+                let bob = 2 * .pi * time / 8 * 2.6
                 // Turning squeezes the fish through zero width, so it reads as a turn rather than a flip.
                 let facing = still ? 1 : max(-1, min(1, 3 * cos(angle)))
                 let tail = still ? 0 : (3 + 14 * level) * sin(time * 11)
@@ -613,7 +615,7 @@ private struct SwimmingFish: View {
                     .scaleEffect(x: facing, y: 1)
                     .offset(
                         x: still ? 0 : travel * sin(angle),
-                        y: still ? 0 : 1.5 * sin(angle * 2.6)
+                        y: still ? 0 : 1.5 * sin(bob)
                     )
                     .frame(width: proxy.size.width, height: proxy.size.height)
             }

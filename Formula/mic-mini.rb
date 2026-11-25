@@ -1,7 +1,7 @@
 class MicMini < Formula
   desc "Notch voice recorder for your goldfish memory"
   homepage "https://github.com/flol3622/mic-mini"
-  url "https://github.com/flol3622/mic-mini.git", tag: "v0.2.0"
+  url "https://github.com/flol3622/mic-mini.git", tag: "v0.2.1"
   license "MIT"
   head "https://github.com/flol3622/mic-mini.git", branch: "main"
 
