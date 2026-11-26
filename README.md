@@ -16,7 +16,7 @@
 
 <br/>
 
-<img src="assets/hero.png" alt="Mic Mini recording: a black island grows out of the MacBook notch with a swimming blue fish, Pause and Stop buttons" width="100%">
+<img src="assets/hero.png" alt="Mic Mini recording: a black island grows out of the MacBook notch with a swimming blue fish, and a grabbing hand about to catch it" width="100%">
 
 <br/>
 
@@ -79,7 +79,7 @@ mic-mini
 
 1. `brew tap` adds this repository as a tap. It's its own tap, so there's nothing else to add.
 2. `brew trust` is how Homebrew 7 asks you to approve formulae from outside its official taps. Skip it on older Homebrew.
-3. `mic-mini` starts the app. From then on, Mic Mini opens at login by itself. It also puts a small launcher in `~/Applications`, so you can start it with ⌘Space (Spotlight doesn't look inside Homebrew's folders).
+3. `mic-mini` starts the app. From then on, Mic Mini opens at login by itself. It also puts a small launcher in `~/Applications`, so you can start it with ⌘Space: type "mic mini" and press Return. (Spotlight doesn't look inside Homebrew's folders, hence the launcher.)
 
 On your first recording, macOS asks for microphone access. Click **Allow**.
 
@@ -99,7 +99,7 @@ Your recordings stay in their folder.
 
 ## 🎙️ Use It
 
-<img src="assets/states.png" alt="Four states of the island: idle behind the notch; hover with folder, settings and record buttons; recording with a fish beside the notch; hover while recording with pause and stop" width="100%">
+<img src="assets/states.png" alt="Four states: idle with a fish icon in the menu bar; the menu bar popover with folder, settings and record buttons; recording with a fish swimming out of the notch; a grabbing hand catching the fish" width="100%">
 
 1. **Record.** Click the fish in the menu bar, then the teal **fish** button.
 2. **Keep going.** The blue fish swims out of the notch while you record, and the menu bar fish turns red. Click the menu bar fish to **pause**, **resume** or **stop**. Paused time isn't recorded.
@@ -187,6 +187,7 @@ Sources/Launcher.swift         the ~/Applications launcher that lets Spotlight f
 Sources/MeetingRecorder.swift  AVAudioRecorder: start, pause, resume, stop, level meter
 Sources/Settings.swift         preferences, Open at login, settings window
 app/Info.plist                 bundle: LSUIElement (no Dock icon), microphone usage text
+app/AppIcon.icns               app icon, made from assets/logo.svg
 scripts/build.sh               swiftc → dist/Mic Mini.app, ad-hoc signed
 scripts/install.sh             installs the current checkout through a local Homebrew tap
 Formula/mic-mini.rb            the public Homebrew formula (this repository is its own tap)

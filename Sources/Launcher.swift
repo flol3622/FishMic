@@ -1,3 +1,4 @@
+import CoreServices
 import Foundation
 
 /// Spotlight doesn't index Homebrew's folders, so an app installed by a formula can't be found with ⌘Space.
@@ -20,18 +21,24 @@ enum SpotlightLauncher {
         let scriptURL = contents.appendingPathComponent("MacOS/\(executable)")
         let plistURL = contents.appendingPathComponent("Info.plist")
         let script = "#!/bin/sh\nexec /usr/bin/open '\(target)'\n"
+        let version = Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "0"
+        let iconURL = contents.appendingPathComponent("Resources/AppIcon.icns")
 
         if fileManager.fileExists(atPath: launcher.path) {
             // Leave alone anything that isn't our launcher, such as a copy of the app put there by hand.
             guard let existing = NSDictionary(contentsOf: plistURL),
                   existing["CFBundleIdentifier"] as? String == identifier
             else { return }
-            if (try? String(contentsOf: scriptURL, encoding: .utf8)) == script { return }
+            // Rewrite it when Mic Mini is upgraded, so it picks up a new icon or name.
+            if existing["CFBundleShortVersionString"] as? String == version,
+               (try? String(contentsOf: scriptURL, encoding: .utf8)) == script { return }
         }
 
         let info: [String: Any] = [
             "CFBundleDevelopmentRegion": "en",
             "CFBundleExecutable": executable,
+            "CFBundleIconFile": "AppIcon",
+            "CFBundleShortVersionString": version,
             "CFBundleIdentifier": identifier,
             "CFBundleInfoDictionaryVersion": "6.0",
             "CFBundleName": "Mic Mini",
@@ -46,6 +53,16 @@ enum SpotlightLauncher {
             try fileManager.setAttributes([.posixPermissions: 0o755], ofItemAtPath: scriptURL.path)
             let data = try PropertyListSerialization.data(fromPropertyList: info, format: .xml, options: 0)
             try data.write(to: plistURL, options: .atomic)
+            if let icon = Bundle.main.url(forResource: "AppIcon", withExtension: "icns") {
+                try fileManager.createDirectory(
+                    at: iconURL.deletingLastPathComponent(), withIntermediateDirectories: true
+                )
+                try? fileManager.removeItem(at: iconURL)
+                try fileManager.copyItem(at: icon, to: iconURL)
+            }
+            // Tell Launch Services and Spotlight about the new icon right away.
+            try? fileManager.setAttributes([.modificationDate: Date()], ofItemAtPath: launcher.path)
+            LSRegisterURL(launcher as CFURL, true)
         } catch {
             // Not worth bothering anyone about: Mic Mini still runs, it just can't be found in Spotlight.
         }
