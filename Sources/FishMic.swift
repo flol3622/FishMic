@@ -83,7 +83,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private func showError(_ message: String) {
         let alert = NSAlert()
         alert.alertStyle = .warning
-        alert.messageText = "Mic Mini"
+        alert.messageText = "FishMic"
         alert.informativeText = message
         alert.addButton(withTitle: "OK")
         NSApp.activate()
@@ -92,7 +92,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 }
 
 @main
-struct MicMini {
+struct FishMic {
     @MainActor
     static func main() {
         let app = NSApplication.shared

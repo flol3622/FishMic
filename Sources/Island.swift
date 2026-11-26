@@ -78,7 +78,7 @@ final class IslandController: NSObject {
     private var meterTimer: Timer?
     private var pointerTimer: Timer?
     private var catchTask: DispatchWorkItem?
-    /// The cursor Mic Mini last set, so it restores the arrow only once when the pointer leaves.
+    /// The cursor FishMic last set, so it restores the arrow only once when the pointer leaves.
     private var cursor: PointerCursor = .untouched
     private var isPressing = false
     private var monitors: [Any] = []
@@ -101,7 +101,7 @@ final class IslandController: NSObject {
         self.recorder = recorder
         super.init()
 
-        panel.title = "Mic Mini"
+        panel.title = "FishMic"
         panel.isOpaque = false
         panel.backgroundColor = .clear
         panel.hasShadow = false

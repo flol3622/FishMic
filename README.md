@@ -1,8 +1,8 @@
 <div align="center">
 
-<img src="assets/logo.svg" alt="Mic Mini logo" width="112" height="112">
+<img src="assets/logo.svg" alt="FishMic logo" width="112" height="112">
 
-# Mic Mini
+# FishMic
 
 ### A recorder for your goldfish memory: record anything, anytime, straight from the menu bar of your Mac
 
@@ -16,16 +16,16 @@
 
 <br/>
 
-<img src="assets/hero.png" alt="Mic Mini recording: a black island grows out of the MacBook notch with a swimming blue fish, and a grabbing hand about to catch it" width="100%">
+<img src="assets/hero.png" alt="FishMic recording: a black island grows out of the MacBook notch with a swimming blue fish, and a grabbing hand about to catch it" width="100%">
 
 <br/>
 
-**Mic Mini** is a small fish in your menu bar. Click it, hit record, and it records: a meeting, a lecture, a hallway idea, a call. While it records, a blue fish swims out of your MacBook's camera notch; catch it with the mouse to stop. No window, no Dock icon. You get a small, voice-tuned audio file that's ready for any AI to transcribe and summarize.
+**FishMic** is a small fish in your menu bar. Click it, hit record, and it records: a meeting, a lecture, a hallway idea, a call. While it records, a blue fish swims out of your MacBook's camera notch; catch it with the mouse to stop. No window, no Dock icon. You get a small, voice-tuned audio file that's ready for any AI to transcribe and summarize.
 
 ```sh
-brew tap flol3622/mic-mini https://github.com/flol3622/mic-mini
-brew trust --formula flol3622/mic-mini/mic-mini
-brew install flol3622/mic-mini/mic-mini && mic-mini
+brew tap flol3622/fishmic https://github.com/flol3622/FishMic
+brew trust --formula flol3622/fishmic/fishmic
+brew install flol3622/fishmic/fishmic && fishmic
 ```
 
 </div>
@@ -36,9 +36,9 @@ brew install flol3622/mic-mini/mic-mini && mic-mini
 
 ## 🐠 At a Glance
 
-You leave the meeting, and ten minutes later the decision, the number or the name is gone. Mic Mini makes capturing it a one-second habit: it's always there, it never gets in the way, and the file it makes is built for transcription.
+You leave the meeting, and ten minutes later the decision, the number or the name is gone. FishMic makes capturing it a one-second habit: it's always there, it never gets in the way, and the file it makes is built for transcription.
 
-| | Voice Memos | QuickTime Player | AI meeting bots | **Mic Mini** |
+| | Voice Memos | QuickTime Player | AI meeting bots | **FishMic** |
 | :--- | :---: | :---: | :---: | :---: |
 | **Start recording** | Open the app, click | File → New Audio Recording | Invite the bot to the call | ✅ **Click the fish in the menu bar** |
 | **On screen while recording** | App window | Window | A participant in the call | ✅ **A small fish beside the notch** |
@@ -51,12 +51,12 @@ You leave the meeting, and ten minutes later the decision, the number or the nam
 
 ## ✨ Features
 
-- **Subtle.** Mic Mini has no window and no Dock icon, just a fish in the menu bar. When you're not recording, the notch stays empty.
-- **Anytime.** Click the menu bar fish and the controls drop down. One click starts recording. Mic Mini opens at login, so it's always there after a restart, and ⌘Space finds it like any other app.
+- **Subtle.** FishMic has no window and no Dock icon, just a fish in the menu bar. When you're not recording, the notch stays empty.
+- **Anytime.** Click the menu bar fish and the controls drop down. One click starts recording. FishMic opens at login, so it's always there after a restart, and ⌘Space finds it like any other app.
 - **Alive, not loud.** While recording, a blue fish swims out of the notch. It beats its tail harder when the microphone hears you, so a glance tells you it's working.
 - **Catch the fish to stop.** Your pointer turns into a grabbing hand over the fish. Click it and it's caught: the recording is saved with a one-second flourish.
 - **Tuned for voice.** Mono AAC at 24 kHz and 32 kbps, about **15 MB per hour**: speech stays clear and files stay small enough to upload anywhere. A 48 kbps option is in Settings.
-- **Safe for long meetings.** Audio is written to disk as you record. Your Mac won't go to idle sleep while recording. If the microphone disappears mid-meeting, everything captured so far is kept and Mic Mini tells you where.
+- **Safe for long meetings.** Audio is written to disk as you record. Your Mac won't go to idle sleep while recording. If the microphone disappears mid-meeting, everything captured so far is kept and FishMic tells you where.
 - **Pause and resume** without starting a new file.
 - **Native to macOS 26.** SwiftUI and Liquid Glass controls, a spring animation that follows Reduce Motion, VoiceOver labels, and a light trackpad tap when you start or stop.
 
@@ -66,26 +66,38 @@ You leave the meeting, and ten minutes later the decision, the number or the nam
 
 **You need:**
 - macOS 26 (Tahoe) or later. It works best on a MacBook with a notch; other Macs get a Liquid Glass pill under the menu bar.
-- [Homebrew](https://brew.sh) and Apple's Command Line Tools (`xcode-select --install`). Homebrew builds Mic Mini from source on your Mac.
+- [Homebrew](https://brew.sh) and Apple's Command Line Tools (`xcode-select --install`). Homebrew builds FishMic from source on your Mac.
 
 ### Homebrew
 
 ```sh
-brew tap flol3622/mic-mini https://github.com/flol3622/mic-mini
-brew trust --formula flol3622/mic-mini/mic-mini
-brew install flol3622/mic-mini/mic-mini
-mic-mini
+brew tap flol3622/fishmic https://github.com/flol3622/FishMic
+brew trust --formula flol3622/fishmic/fishmic
+brew install flol3622/fishmic/fishmic
+fishmic
 ```
 
 1. `brew tap` adds this repository as a tap. It's its own tap, so there's nothing else to add.
 2. `brew trust` is how Homebrew 7 asks you to approve formulae from outside its official taps. Skip it on older Homebrew.
-3. `mic-mini` starts the app. From then on, Mic Mini opens at login by itself. It also puts a small launcher in `~/Applications`, so you can start it with ⌘Space: type "mic mini" and press Return. (Spotlight doesn't look inside Homebrew's folders, hence the launcher.)
+3. `fishmic` starts the app. From then on, FishMic opens at login by itself. It also puts a small launcher in `~/Applications`, so you can start it with ⌘Space: type "fishmic" and press Return. (Spotlight doesn't look inside Homebrew's folders, hence the launcher.)
 
 On your first recording, macOS asks for microphone access. Click **Allow**.
 
-**Update** with `brew upgrade flol3622/mic-mini/mic-mini`, or follow `main` with `brew install --HEAD flol3622/mic-mini/mic-mini`.
+**Update** with `brew upgrade flol3622/fishmic/fishmic`, or follow `main` with `brew install --HEAD flol3622/fishmic/fishmic`.
 
-**Uninstall:** in Mic Mini's Settings, turn off **Open at login** and click **Quit Mic Mini**, then:
+**Uninstall:** in FishMic's Settings, turn off **Open at login** and click **Quit FishMic**, then:
+
+```sh
+brew uninstall flol3622/fishmic/fishmic
+brew untap flol3622/fishmic
+rm -rf ~/Applications/"FishMic.app"
+```
+
+Your recordings stay in their folder.
+
+### Coming from Mic Mini?
+
+FishMic is the new name of Mic Mini (0.3.1 and earlier). `brew upgrade` doesn't carry you across, so swap it once. In Mic Mini's Settings, turn off **Open at login** and click **Quit Mic Mini**, then:
 
 ```sh
 brew uninstall flol3622/mic-mini/mic-mini
@@ -93,7 +105,7 @@ brew untap flol3622/mic-mini
 rm -rf ~/Applications/"Mic Mini.app"
 ```
 
-Your recordings stay in their folder.
+Then [install FishMic](#homebrew). It starts with default settings and saves to `~/Music/FishMic`. Your old recordings stay in `~/Music/Mic Mini`: move them over, or pick that folder in Settings.
 
 ---
 
@@ -106,15 +118,15 @@ Your recordings stay in their folder.
 3. **Or catch it.** Click the swimming fish itself to stop and save.
 4. **Find it.** A green check confirms the save. Open the menu bar fish to see the recording's name, and click it to show the file in Finder. The **folder** button opens all your recordings. Right-click the menu bar fish for Settings and Quit.
 
-Recordings go to `~/Music/Mic Mini` by default, named by date and time, such as `Meeting 2026-11-24 14.03.11.m4a`, so they sort chronologically. **Settings** (the gear) changes the folder, the audio quality and **Open at login**, and has **Quit Mic Mini**.
+Recordings go to `~/Music/FishMic` by default, named by date and time, such as `Meeting 2026-11-24 14.03.11.m4a`, so they sort chronologically. **Settings** (the gear) changes the folder, the audio quality and **Open at login**, and has **Quit FishMic**.
 
-> **Online meetings:** Mic Mini records the microphone, not your Mac's sound output. With headphones on, you get your side of the call. Without headphones, the microphone usually picks up both sides from the speakers.
+> **Online meetings:** FishMic records the microphone, not your Mac's sound output. With headphones on, you get your side of the call. Without headphones, the microphone usually picks up both sides from the speakers.
 
 ---
 
 ## 🤖 Ready for AI
 
-Mic Mini's files are made to be handed to a model: mono, speech-tuned, and small.
+FishMic's files are made to be handed to a model: mono, speech-tuned, and small.
 
 | Setting | Format | Size per hour | Fits in a 25 MB upload |
 | :--- | :--- | :---: | :---: |
@@ -135,11 +147,11 @@ Then put the transcript to work. A prompt that does most of the remembering for 
 
 ## 🛡️ Private by Design
 
-- **No network access.** Mic Mini contains no networking code. Recordings stay in your folder until you decide to share them.
-- **Nothing runs until you click.** Mic Mini only opens the microphone when you press the fish, and closes it when you stop.
+- **No network access.** FishMic contains no networking code. Recordings stay in your folder until you decide to share them.
+- **Nothing runs until you click.** FishMic only opens the microphone when you press the fish, and closes it when you stop.
 - **Only what you need.** The one permission it asks for is the microphone. Catching the fish uses ordinary mouse events, so it doesn't need Accessibility or Screen Recording access.
 
-> **Record responsibly.** Mic Mini is deliberately unobtrusive, and while recording, the fish's lane covers the part of the menu bar where macOS usually shows its orange microphone indicator. Recording people without their consent is illegal in many places. Tell the people you record.
+> **Record responsibly.** FishMic is deliberately unobtrusive, and while recording, the fish's lane covers the part of the menu bar where macOS usually shows its orange microphone indicator. Recording people without their consent is illegal in many places. Tell the people you record.
 
 ---
 
@@ -152,7 +164,7 @@ flowchart LR
         B -- "Record · Pause · Stop" --> E["MeetingRecorder<br/>AVAudioRecorder, AAC"]
         E -- "level meter" --> D["IslandController<br/>TimelineView fish in the notch"]
         D -- "catch the fish" --> E
-        E --> F[("~/Music/Mic Mini/*.m4a")]
+        E --> F[("~/Music/FishMic/*.m4a")]
     end
 
     style MAC fill:#f8f9fa,stroke:#0a84ff,stroke-width:2px,color:#000
@@ -169,10 +181,10 @@ flowchart LR
 
 ## ⚠️ Limitations
 
-- **macOS 26 or later.** Mic Mini uses Liquid Glass and other macOS 26 SwiftUI APIs.
+- **macOS 26 or later.** FishMic uses Liquid Glass and other macOS 26 SwiftUI APIs.
 - **Microphone only.** It doesn't capture your Mac's sound output. See [Online meetings](#%EF%B8%8F-use-it).
-- **Permission after each update.** Homebrew builds Mic Mini on your Mac and signs it ad hoc, so macOS treats every new build as a new app and asks for microphone access again.
-- **A fixed lane.** While recording, the island covers about 230 points of the menu bar to the right of the notch. Menu bar icons there are hidden until you stop, which can include Mic Mini's own (stop by catching the fish, or ⌘-drag the icon further right). That also includes the microphone indicator, whichever app is using the microphone.
+- **Permission after each update.** Homebrew builds FishMic on your Mac and signs it ad hoc, so macOS treats every new build as a new app and asks for microphone access again.
+- **A fixed lane.** While recording, the island covers about 230 points of the menu bar to the right of the notch. Menu bar icons there are hidden until you stop, which can include FishMic's own (stop by catching the fish, or ⌘-drag the icon further right). That also includes the microphone indicator, whichever app is using the microphone.
 - **One screen.** The island appears on the display with a notch, or on the main display if there's none.
 
 ---
@@ -180,7 +192,7 @@ flowchart LR
 ## 🛠️ Development
 
 ```text
-Sources/MicMini.swift          app delegate: wires the menu bar, island, recorder and settings
+Sources/FishMic.swift          app delegate: wires the menu bar, island, recorder and settings
 Sources/MenuBar.swift          menu bar item, popover controls, right-click menu
 Sources/Island.swift           the notch island while recording: panel, swimming fish, catch animation
 Sources/Launcher.swift         the ~/Applications launcher that lets Spotlight find a Homebrew install
@@ -188,20 +200,20 @@ Sources/MeetingRecorder.swift  AVAudioRecorder: start, pause, resume, stop, leve
 Sources/Settings.swift         preferences, Open at login, settings window
 app/Info.plist                 bundle: LSUIElement (no Dock icon), microphone usage text
 app/AppIcon.icns               app icon, made from assets/logo.svg
-scripts/build.sh               swiftc → dist/Mic Mini.app, ad-hoc signed
+scripts/build.sh               swiftc → dist/FishMic.app, ad-hoc signed
 scripts/install.sh             installs the current checkout through a local Homebrew tap
-Formula/mic-mini.rb            the public Homebrew formula (this repository is its own tap)
+Formula/fishmic.rb            the public Homebrew formula (this repository is its own tap)
 ```
 
 ```sh
-./scripts/build.sh                 # dist/Mic Mini.app
-open "dist/Mic Mini.app"
+./scripts/build.sh                 # dist/FishMic.app
+open "dist/FishMic.app"
 ./scripts/install.sh               # or install the checkout with Homebrew
 ```
 
 The build uses only `swiftc` from the Command Line Tools, with no Xcode project. That's why the SwiftUI code avoids `@State`: in the macOS 26 SDK it's a macro whose plugin ships with Xcode only.
 
-**To release:** bump `CFBundleShortVersionString` and `CFBundleVersion` in `app/Info.plist`, set the same version in the `tag:` of `Formula/mic-mini.rb`, commit, then tag `vX.Y.Z` and push the tag.
+**To release:** bump `CFBundleShortVersionString` and `CFBundleVersion` in `app/Info.plist`, set the same version in the `tag:` of `Formula/fishmic.rb`, commit, then tag `vX.Y.Z` and push the tag.
 
 ---
 

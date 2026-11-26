@@ -187,6 +187,6 @@ final class MeetingRecorder: NSObject, AVAudioRecorderDelegate {
     }
 
     private func reportDeniedPermission() {
-        onError?("Allow Mic Mini to use the microphone in System Settings → Privacy & Security → Microphone.")
+        onError?("Allow FishMic to use the microphone in System Settings → Privacy & Security → Microphone.")
     }
 }

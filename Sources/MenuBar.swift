@@ -25,7 +25,7 @@ final class PanelModel {
 
 // MARK: - Menu bar item
 
-/// Mic Mini's home: a menu bar icon that opens the controls in a popover.
+/// FishMic's home: a menu bar icon that opens the controls in a popover.
 /// Right-click (or Control-click) for a small menu with Settings and Quit.
 @MainActor
 final class MenuBarController: NSObject {
@@ -94,17 +94,17 @@ final class MenuBarController: NSObject {
         let tint: NSColor?
         let label: String
         if showsSaved {
-            (symbol, tint, label) = ("checkmark.circle.fill", nil, "Mic Mini, recording saved")
+            (symbol, tint, label) = ("checkmark.circle.fill", nil, "FishMic, recording saved")
         } else {
             switch model.recorderState {
-            case .recording: (symbol, tint, label) = ("fish.fill", .systemRed, "Mic Mini, recording")
-            case .paused: (symbol, tint, label) = ("pause.circle.fill", nil, "Mic Mini, paused")
-            case .idle, .requestingPermission: (symbol, tint, label) = ("fish", nil, "Mic Mini")
+            case .recording: (symbol, tint, label) = ("fish.fill", .systemRed, "FishMic, recording")
+            case .paused: (symbol, tint, label) = ("pause.circle.fill", nil, "FishMic, paused")
+            case .idle, .requestingPermission: (symbol, tint, label) = ("fish", nil, "FishMic")
             }
         }
         button.image = NSImage(systemSymbolName: symbol, accessibilityDescription: label)
         button.contentTintColor = tint
-        button.toolTip = "Mic Mini"
+        button.toolTip = "FishMic"
     }
 
     @objc private func statusItemClicked() {
@@ -124,7 +124,7 @@ final class MenuBarController: NSObject {
         menu.addItem(withTitle: "Settings…", action: #selector(openSettings), keyEquivalent: ",").target = self
         menu.addItem(withTitle: "Open Recordings Folder", action: #selector(openFolder), keyEquivalent: "").target = self
         menu.addItem(.separator())
-        menu.addItem(withTitle: "Quit Mic Mini", action: #selector(quit), keyEquivalent: "q").target = self
+        menu.addItem(withTitle: "Quit FishMic", action: #selector(quit), keyEquivalent: "q").target = self
         statusItem.menu = menu
         statusItem.button?.performClick(nil)
         statusItem.menu = nil

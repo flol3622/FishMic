@@ -18,7 +18,7 @@ final class Preferences {
         didSet { defaults.set(bitRate, forKey: Self.bitRateKey) }
     }
 
-    /// Whether Mic Mini starts when you log in. On by default, so it's back in the notch after a restart.
+    /// Whether FishMic starts when you log in. On by default, so it's back in the notch after a restart.
     private(set) var opensAtLogin: Bool
     /// macOS can require the user to allow the login item in System Settings.
     private(set) var loginItemNeedsApproval = false
@@ -29,7 +29,7 @@ final class Preferences {
         } else {
             let music = FileManager.default.urls(for: .musicDirectory, in: .userDomainMask).first
                 ?? FileManager.default.homeDirectoryForCurrentUser.appendingPathComponent("Music", isDirectory: true)
-            directory = music.appendingPathComponent("Mic Mini", isDirectory: true)
+            directory = music.appendingPathComponent("FishMic", isDirectory: true)
         }
         bitRate = defaults.integer(forKey: Self.bitRateKey) == 48_000 ? 48_000 : 32_000
         opensAtLogin = defaults.object(forKey: Self.opensAtLoginKey) as? Bool ?? true
@@ -72,7 +72,7 @@ final class SettingsWindow: NSWindowController {
         let host = NSHostingController(rootView: SettingsView(preferences: preferences, onError: onError))
         host.sizingOptions = [.preferredContentSize]
         let window = NSWindow(contentViewController: host)
-        window.title = "Mic Mini Settings"
+        window.title = "FishMic Settings"
         window.styleMask = [.titled, .closable]
         window.isReleasedWhenClosed = false
         super.init(window: window)
@@ -124,14 +124,14 @@ struct SettingsView: View {
                         Button("Open Login Items") { SMAppService.openSystemSettingsLoginItems() }
                     } label: {
                         Text("Waiting for approval")
-                        Text("Allow Mic Mini in System Settings to start it at login.")
+                        Text("Allow FishMic in System Settings to start it at login.")
                     }
                 }
             }
 
             Section {
                 HStack {
-                    Button("Quit Mic Mini") { NSApp.terminate(nil) }
+                    Button("Quit FishMic") { NSApp.terminate(nil) }
                     Spacer()
                     Button("Open Folder") {
                         if let message = preferences.openDirectory() { onError(message) }
