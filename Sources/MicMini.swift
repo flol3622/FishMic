@@ -5,18 +5,22 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private let recorder = MeetingRecorder()
     private let preferences = Preferences()
     private lazy var island = IslandController(recorder: recorder)
+    private lazy var menuBar = MenuBarController(recorder: recorder)
     private var settingsWindow: SettingsWindow?
     private var isQuitting = false
 
     func applicationDidFinishLaunching(_ notification: Notification) {
-        recorder.onStateChange = { [weak self] state in self?.island.recordingStateChanged(state) }
+        recorder.onStateChange = { [weak self] state in
+            self?.island.recordingStateChanged(state)
+            self?.menuBar.recordingStateChanged(state)
+        }
         recorder.onSaved = { [weak self] url, duration in
             guard let self, !isQuitting else { return }
-            island.showSaved(url, duration: duration)
+            menuBar.showSaved(url, duration: duration)
         }
         recorder.onError = { [weak self] message in self?.showError(message) }
 
-        let model = island.model
+        let model = menuBar.model
         model.onRecord = { [weak self] in self?.toggleRecording() }
         model.onPause = { [weak self] in self?.togglePause() }
         model.onSettings = { [weak self] in self?.showSettings() }
@@ -25,19 +29,21 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             showError(message)
         }
         model.onReveal = { url in NSWorkspace.shared.activateFileViewerSelecting([url]) }
-        island.startMonitoring()
+        island.onCatch = { [weak self] in self?.toggleRecording() }
+        island.start()
         preferences.setOpensAtLogin(preferences.opensAtLogin)
+        SpotlightLauncher.install()
     }
 
     func applicationShouldHandleReopen(_ sender: NSApplication, hasVisibleWindows flag: Bool) -> Bool {
-        island.reveal()
+        menuBar.showPopover()
         return true
     }
 
     func applicationShouldTerminate(_ sender: NSApplication) -> NSApplication.TerminateReply {
         isQuitting = true
         recorder.stop()
-        island.stopMonitoring()
+        island.stop()
         return .terminateNow
     }
 

@@ -4,7 +4,7 @@
 
 # Mic Mini
 
-### A recorder for your goldfish memory: record anything, anytime, straight from the notch of your Mac
+### A recorder for your goldfish memory: record anything, anytime, straight from the menu bar of your Mac
 
 [![macOS](https://img.shields.io/badge/macOS-26%2B_Tahoe-lightgrey.svg?style=flat-square&logo=apple)](#-install)
 [![Homebrew](https://img.shields.io/badge/Homebrew-tap-fbb040.svg?style=flat-square&logo=homebrew&logoColor=white)](#-install)
@@ -20,7 +20,7 @@
 
 <br/>
 
-**Mic Mini** hides behind your MacBook's camera notch. Hover over the notch, click the fish, and it records: a meeting, a lecture, a hallway idea, a call. No window, no Dock icon, no menu bar clutter. You get a small, voice-tuned audio file that's ready for any AI to transcribe and summarize.
+**Mic Mini** is a small fish in your menu bar. Click it, hit record, and it records: a meeting, a lecture, a hallway idea, a call. While it records, a blue fish swims out of your MacBook's camera notch; catch it with the mouse to stop. No window, no Dock icon. You get a small, voice-tuned audio file that's ready for any AI to transcribe and summarize.
 
 ```sh
 brew tap flol3622/mic-mini https://github.com/flol3622/mic-mini
@@ -40,7 +40,7 @@ You leave the meeting, and ten minutes later the decision, the number or the nam
 
 | | Voice Memos | QuickTime Player | AI meeting bots | **Mic Mini** |
 | :--- | :---: | :---: | :---: | :---: |
-| **Start recording** | Open the app, click | File → New Audio Recording | Invite the bot to the call | ✅ **Hover the notch, click the fish** |
+| **Start recording** | Open the app, click | File → New Audio Recording | Invite the bot to the call | ✅ **Click the fish in the menu bar** |
 | **On screen while recording** | App window | Window | A participant in the call | ✅ **A small fish beside the notch** |
 | **In-person conversations** | ✅ | ✅ | ❌ Online calls only | ✅ |
 | **Any call app** | ✅ | ✅ | ⚠️ Supported platforms only | ✅ |
@@ -51,9 +51,10 @@ You leave the meeting, and ten minutes later the decision, the number or the nam
 
 ## ✨ Features
 
-- **Subtle.** Mic Mini has no window, no Dock icon and no menu bar icon. When you're not recording it's invisible, tucked behind the notch.
-- **Anytime.** Hover at the center of the notch and the controls grow out of it, like the Dynamic Island on iPhone. One click starts recording. Mic Mini opens at login, so it's always there after a restart.
-- **Alive, not loud.** While recording, a blue fish swims beside the notch. It beats its tail harder when the microphone hears you, so a glance tells you it's working.
+- **Subtle.** Mic Mini has no window and no Dock icon, just a fish in the menu bar. When you're not recording, the notch stays empty.
+- **Anytime.** Click the menu bar fish and the controls drop down. One click starts recording. Mic Mini opens at login, so it's always there after a restart, and ⌘Space finds it like any other app.
+- **Alive, not loud.** While recording, a blue fish swims out of the notch. It beats its tail harder when the microphone hears you, so a glance tells you it's working.
+- **Catch the fish to stop.** Your pointer turns into a grabbing hand over the fish. Click it and it's caught: the recording is saved with a one-second flourish.
 - **Tuned for voice.** Mono AAC at 24 kHz and 32 kbps, about **15 MB per hour**: speech stays clear and files stay small enough to upload anywhere. A 48 kbps option is in Settings.
 - **Safe for long meetings.** Audio is written to disk as you record. Your Mac won't go to idle sleep while recording. If the microphone disappears mid-meeting, everything captured so far is kept and Mic Mini tells you where.
 - **Pause and resume** without starting a new file.
@@ -78,7 +79,7 @@ mic-mini
 
 1. `brew tap` adds this repository as a tap. It's its own tap, so there's nothing else to add.
 2. `brew trust` is how Homebrew 7 asks you to approve formulae from outside its official taps. Skip it on older Homebrew.
-3. `mic-mini` starts the app. From then on, Mic Mini opens at login by itself.
+3. `mic-mini` starts the app. From then on, Mic Mini opens at login by itself. It also puts a small launcher in `~/Applications`, so you can start it with ⌘Space (Spotlight doesn't look inside Homebrew's folders).
 
 On your first recording, macOS asks for microphone access. Click **Allow**.
 
@@ -89,6 +90,7 @@ On your first recording, macOS asks for microphone access. Click **Allow**.
 ```sh
 brew uninstall flol3622/mic-mini/mic-mini
 brew untap flol3622/mic-mini
+rm -rf ~/Applications/"Mic Mini.app"
 ```
 
 Your recordings stay in their folder.
@@ -99,9 +101,10 @@ Your recordings stay in their folder.
 
 <img src="assets/states.png" alt="Four states of the island: idle behind the notch; hover with folder, settings and record buttons; recording with a fish beside the notch; hover while recording with pause and stop" width="100%">
 
-1. **Record.** Hover at the center of the notch and click the teal **fish**.
-2. **Keep going.** The blue fish swims beside the notch while you record. Hover over it to **pause**, **resume** or **stop**. Paused time isn't recorded.
-3. **Find it.** A green check confirms the save. Hover again to see the recording's name, and click it to show the file in Finder. The **folder** button opens all your recordings.
+1. **Record.** Click the fish in the menu bar, then the teal **fish** button.
+2. **Keep going.** The blue fish swims out of the notch while you record, and the menu bar fish turns red. Click the menu bar fish to **pause**, **resume** or **stop**. Paused time isn't recorded.
+3. **Or catch it.** Click the swimming fish itself to stop and save.
+4. **Find it.** A green check confirms the save. Open the menu bar fish to see the recording's name, and click it to show the file in Finder. The **folder** button opens all your recordings. Right-click the menu bar fish for Settings and Quit.
 
 Recordings go to `~/Music/Mic Mini` by default, named by date and time, such as `Meeting 2026-11-24 14.03.11.m4a`, so they sort chronologically. **Settings** (the gear) changes the folder, the audio quality and **Open at login**, and has **Quit Mic Mini**.
 
@@ -134,7 +137,7 @@ Then put the transcript to work. A prompt that does most of the remembering for 
 
 - **No network access.** Mic Mini contains no networking code. Recordings stay in your folder until you decide to share them.
 - **Nothing runs until you click.** Mic Mini only opens the microphone when you press the fish, and closes it when you stop.
-- **Only what you need.** The one permission it asks for is the microphone. Hover detection uses ordinary mouse-movement events, so it doesn't need Accessibility or Screen Recording access.
+- **Only what you need.** The one permission it asks for is the microphone. Catching the fish uses ordinary mouse events, so it doesn't need Accessibility or Screen Recording access.
 
 > **Record responsibly.** Mic Mini is deliberately unobtrusive, and while recording, the fish's lane covers the part of the menu bar where macOS usually shows its orange microphone indicator. Recording people without their consent is illegal in many places. Tell the people you record.
 
@@ -145,20 +148,19 @@ Then put the transcript to work. A prompt that does most of the remembering for 
 ```mermaid
 flowchart LR
     subgraph MAC["Your Mac"]
-        A["Pointer over the notch"] --> B["Mouse-move monitor"]
-        B --> C["IslandController<br/>(transparent panel above the menu bar)"]
-        C --> D["IslandView<br/>SwiftUI · Liquid Glass · TimelineView fish"]
-        D -- "Record · Pause · Stop" --> E["MeetingRecorder<br/>AVAudioRecorder, AAC"]
-        E -- "level meter" --> D
+        A["Menu bar fish"] --> B["MenuBarController<br/>NSStatusItem · popover · Liquid Glass"]
+        B -- "Record · Pause · Stop" --> E["MeetingRecorder<br/>AVAudioRecorder, AAC"]
+        E -- "level meter" --> D["IslandController<br/>TimelineView fish in the notch"]
+        D -- "catch the fish" --> E
         E --> F[("~/Music/Mic Mini/*.m4a")]
     end
 
     style MAC fill:#f8f9fa,stroke:#0a84ff,stroke-width:2px,color:#000
 ```
 
-1. **An island that is part of the notch.** A borderless, transparent panel sits just above the menu bar, centered on the notch. The island is drawn black and flush with the top edge, with concave top corners, so it reads as the notch growing. Outside the island, the panel lets every click through to the apps below.
-2. **Hover without permissions.** A global mouse-moved monitor watches for the pointer at the center of the notch. Mouse movement doesn't need Accessibility access, unlike key events.
-3. **Liquid Glass on black.** The controls use SwiftUI's interactive `glassEffect` inside a `GlassEffectContainer`, so they respond to your press and morph between Record and Stop. Glass picks up the colour behind it, which on a black island is none, so Record and Stop add a tinted fill, the way Live Activity controls do on iPhone.
+1. **A menu bar home.** An `NSStatusItem` opens a popover with the controls. They use SwiftUI's interactive `glassEffect` inside a `GlassEffectContainer`, so they respond to your press and morph between Record and Stop.
+2. **An island that is part of the notch.** While recording, a borderless, transparent panel just above the menu bar draws a black island flush with the top edge, with concave top corners, so it reads as the notch growing. It takes the clicks on itself and lets every other click through.
+3. **Catch it without permissions.** The panel knows where the fish is from the same clock that animates it, and checks your click against it. A global mouse-moved monitor shows the grabbing hand; mouse movement doesn't need Accessibility access, unlike key events.
 4. **A fish that listens.** A `TimelineView` swims the fish along its lane; the tail's beat follows `AVAudioRecorder`'s level meter, sampled 12 times per second.
 5. **Recording that survives.** `AVAudioRecorder` streams AAC to disk. A `ProcessInfo` activity holds off idle sleep, and a watchdog notices when the input device vanishes without telling anyone.
 6. **Back after a restart.** **Open at login** uses `SMAppService`, the same login items you see in System Settings → General → Login Items & Extensions.
@@ -170,7 +172,7 @@ flowchart LR
 - **macOS 26 or later.** Mic Mini uses Liquid Glass and other macOS 26 SwiftUI APIs.
 - **Microphone only.** It doesn't capture your Mac's sound output. See [Online meetings](#%EF%B8%8F-use-it).
 - **Permission after each update.** Homebrew builds Mic Mini on your Mac and signs it ad hoc, so macOS treats every new build as a new app and asks for microphone access again.
-- **A fixed lane.** While recording, the island covers about 136 points of the menu bar to the right of the notch. Menu bar icons there are hidden until you stop. That includes the microphone indicator, whichever app is using the microphone.
+- **A fixed lane.** While recording, the island covers about 230 points of the menu bar to the right of the notch. Menu bar icons there are hidden until you stop, which can include Mic Mini's own (stop by catching the fish, or ⌘-drag the icon further right). That also includes the microphone indicator, whichever app is using the microphone.
 - **One screen.** The island appears on the display with a notch, or on the main display if there's none.
 
 ---
@@ -178,8 +180,10 @@ flowchart LR
 ## 🛠️ Development
 
 ```text
-Sources/MicMini.swift          app delegate: wires the island, recorder and settings
-Sources/Island.swift           island model, panel controller, SwiftUI views, notch shape, swimming fish
+Sources/MicMini.swift          app delegate: wires the menu bar, island, recorder and settings
+Sources/MenuBar.swift          menu bar item, popover controls, right-click menu
+Sources/Island.swift           the notch island while recording: panel, swimming fish, catch animation
+Sources/Launcher.swift         the ~/Applications launcher that lets Spotlight find a Homebrew install
 Sources/MeetingRecorder.swift  AVAudioRecorder: start, pause, resume, stop, level meter
 Sources/Settings.swift         preferences, Open at login, settings window
 app/Info.plist                 bundle: LSUIElement (no Dock icon), microphone usage text

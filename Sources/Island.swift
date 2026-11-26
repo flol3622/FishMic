@@ -3,65 +3,40 @@ import SwiftUI
 
 // MARK: - Model
 
+/// The island only shows the swimming fish while a recording is live. Everything else lives in the menu bar.
 @MainActor
 @Observable
 final class IslandModel {
     enum Mode: Equatable {
         /// Tucked behind the notch, invisible.
         case hidden
-        /// A recording is live: a level meter and timer flank the notch.
+        /// A recording is live: the fish swims beside the notch.
         case compact
-        /// A short confirmation after a recording is saved.
-        case saved
-        /// The pointer is over the island: full controls.
-        case expanded
     }
 
-    struct Recording: Equatable {
-        var url: URL
-        var duration: TimeInterval
-    }
-
-    /// Width of the content on each side of the notch in the saved confirmation.
-    static let side: CGFloat = 72
-    static let rowHeight: CGFloat = 66
+    /// Width of the fish's lane right of the notch. On a notched display it's wide enough to cover
+    /// the menu bar next to the notch, where macOS shows its microphone indicator and the nearest tray icons.
+    var swimLane: CGFloat { hasNotch ? 230 : 72 }
 
     var hasNotch = false
     /// The hardware notch, or a small virtual gap on displays without one.
     var notch = CGSize(width: 10, height: 30)
 
-    var isHovering = false
-    var isConfirmingSave = false
     var recorderState: MeetingRecorder.State = .idle
     var levels: [Double] = Array(repeating: 0, count: 5)
-    var inputName: String?
-    var lastRecording: Recording?
 
-    @ObservationIgnored var onRecord: () -> Void = {}
-    @ObservationIgnored var onPause: () -> Void = {}
-    @ObservationIgnored var onSettings: () -> Void = {}
-    @ObservationIgnored var onOpenFolder: () -> Void = {}
-    @ObservationIgnored var onReveal: (URL) -> Void = { _ in }
+    /// Called when the swimming fish is clicked.
+    @ObservationIgnored var onCatch: () -> Void = {}
 
-    var mode: Mode {
-        if isHovering { return .expanded }
-        if recorderState != .idle { return .compact }
-        if isConfirmingSave { return .saved }
-        return .hidden
-    }
+    /// Where the fish was, left or right of the lane's center, when it was caught. Set while the catch animation plays.
+    var catchOffset: CGFloat?
 
-    /// The top row shares the notch's height and keeps its content clear of the notch.
-    var showsTopRow: Bool { hasNotch || recorderState != .idle }
+    var mode: Mode { recorderState == .idle && catchOffset == nil ? .hidden : .compact }
 
     /// Width of the concave curves that blend the island into the top edge of the screen.
     var earRadius: CGFloat { hasNotch ? 7 : 0 }
 
-    var maximumSize: CGSize { size(for: .expanded) }
-
-    /// Width of the fish's lane right of the notch while recording. On a notched display it's wide
-    /// enough to cover the menu bar next to the notch, where macOS shows its microphone indicator
-    /// and the nearest tray icons.
-    var swimLane: CGFloat { hasNotch ? 230 : Self.side }
+    var maximumSize: CGSize { size(for: .compact) }
 
     func size(for mode: Mode) -> CGSize {
         switch mode {
@@ -70,19 +45,11 @@ final class IslandModel {
                 ? CGSize(width: max(0, notch.width - 2 * earRadius - 8), height: max(0, notch.height - 2))
                 : CGSize(width: notch.width + swimLane, height: notch.height)
         case .compact:
-            // Only the fish, right of the notch.
             CGSize(width: notch.width + swimLane, height: notch.height)
-        case .saved:
-            CGSize(width: notch.width + 2 * Self.side, height: notch.height)
-        case .expanded:
-            CGSize(
-                width: max(notch.width + 2 * swimLane, 410),
-                height: (showsTopRow ? notch.height : 0) + Self.rowHeight
-            )
         }
     }
 
-    /// Horizontal shift from the notch's center. The compact island grows to the right only.
+    /// Horizontal shift from the notch's center. The island grows to the right only.
     func offset(for mode: Mode) -> CGFloat {
         mode == .compact && hasNotch ? swimLane / 2 : 0
     }
@@ -90,8 +57,7 @@ final class IslandModel {
     func bottomRadius(for mode: Mode) -> CGFloat {
         switch mode {
         case .hidden: hasNotch ? 8 : notch.height / 2
-        case .compact, .saved: hasNotch ? 13 : notch.height / 2
-        case .expanded: hasNotch ? 26 : 24
+        case .compact: hasNotch ? 13 : notch.height / 2
         }
     }
 }
@@ -109,16 +75,24 @@ final class IslandController: NSObject {
         backing: .buffered,
         defer: false
     )
-    private var monitors: [Any] = []
     private var meterTimer: Timer?
-    private var hoverTimer: Timer?
-    private var collapseTask: DispatchWorkItem?
-    private var savedTask: DispatchWorkItem?
-
+    private var pointerTimer: Timer?
+    private var catchTask: DispatchWorkItem?
+    /// The cursor Mic Mini last set, so it restores the arrow only once when the pointer leaves.
+    private var cursor: PointerCursor = .untouched
+    private var isPressing = false
+    private var monitors: [Any] = []
     /// Screen position of the island's top center.
     private var anchor = NSPoint.zero
-    /// Hovering here reveals the island while it's hidden.
-    private var revealArea = NSRect.zero
+
+    /// Called after the fish is caught: stops and saves the recording.
+    var onCatch: () -> Void = {}
+
+    private static let catchDuration: TimeInterval = 1
+    /// How far from the fish's center a click still catches it.
+    private static let catchSlack: CGFloat = 20
+
+    private enum PointerCursor { case untouched, arrow, openHand, closedHand }
 
     private static let shadowMargin: CGFloat = 40
     private static let menuBarGap: CGFloat = 6
@@ -133,8 +107,9 @@ final class IslandController: NSObject {
         panel.hasShadow = false
         panel.isMovable = false
         panel.hidesOnDeactivate = false
+        // Clicks pass through while the island is hidden. While it shows, it takes every click on it,
+        // so the menu bar items it covers can't be clicked by accident.
         panel.ignoresMouseEvents = true
-        panel.acceptsMouseMovedEvents = true
         panel.isFloatingPanel = true
         panel.animationBehavior = .none
         // Above the menu bar, so the island can grow out of the notch.
@@ -143,12 +118,17 @@ final class IslandController: NSObject {
             .canJoinAllSpaces, .canJoinAllApplications, .stationary, .fullScreenAuxiliary, .ignoresCycle
         ]
 
-        let host = IslandHostingView(rootView: IslandView(model: model))
+        model.onCatch = { [weak self] in self?.catchFish() }
+        panel.onMouseDown = { [weak self] in self?.mouseDown() }
+        panel.onMouseUp = { [weak self] in self?.mouseUp() }
+        enableBackgroundCursor()
+
+        let host = NSHostingView(rootView: IslandView(model: model))
         host.sizingOptions = []
         panel.contentView = host
     }
 
-    func startMonitoring() {
+    func start() {
         reposition()
         panel.orderFrontRegardless()
         NotificationCenter.default.addObserver(
@@ -156,13 +136,13 @@ final class IslandController: NSObject {
             name: NSApplication.didChangeScreenParametersNotification, object: nil
         )
         if let global = NSEvent.addGlobalMonitorForEvents(
-            matching: [.mouseMoved, .leftMouseDragged], handler: { [weak self] _ in self?.pointerMoved() }
+            matching: [.mouseMoved, .leftMouseDragged], handler: { [weak self] _ in self?.updatePointer() }
         ) {
             monitors.append(global)
         }
         if let local = NSEvent.addLocalMonitorForEvents(
             matching: [.mouseMoved, .leftMouseDragged], handler: { [weak self] event in
-                self?.pointerMoved()
+                self?.updatePointer()
                 return event
             }
         ) {
@@ -170,49 +150,137 @@ final class IslandController: NSObject {
         }
     }
 
-    func stopMonitoring() {
+    func stop() {
         for monitor in monitors { NSEvent.removeMonitor(monitor) }
         monitors.removeAll()
-        collapseTask?.cancel()
-        savedTask?.cancel()
+        catchTask?.cancel()
         stopMeter()
-        stopHoverTimer()
+        stopPointerTimer()
         NotificationCenter.default.removeObserver(self)
         panel.orderOut(nil)
     }
 
-    /// Shows the controls briefly, for example when the app is opened again from Finder.
-    func reveal() {
-        expand()
-        scheduleCollapse(after: 2.5)
-    }
-
     func recordingStateChanged(_ state: MeetingRecorder.State) {
         model.recorderState = state
-        model.inputName = recorder.inputName
         if state == .idle {
             stopMeter()
             model.levels = model.levels.map { _ in 0 }
         } else {
-            isConfirmingSave(false)
+            endCatch()
             startMeter()
+            startPointerTimer()
         }
-        updatePointerPassthrough()
+        updatePointer()
     }
 
-    func showSaved(_ url: URL, duration: TimeInterval) {
-        model.lastRecording = .init(url: url, duration: duration)
-        isConfirmingSave(true)
-        let task = DispatchWorkItem { [weak self] in self?.isConfirmingSave(false) }
-        savedTask = task
-        DispatchQueue.main.asyncAfter(deadline: .now() + 3, execute: task)
+    /// Plays the catch animation where the fish is, and stops the recording right away.
+    private func catchFish() {
+        guard model.recorderState == .recording || model.recorderState == .paused else { return }
+        model.catchOffset = fishOffset()
+        let task = DispatchWorkItem { [weak self] in self?.endCatch() }
+        catchTask = task
+        DispatchQueue.main.asyncAfter(deadline: .now() + Self.catchDuration, execute: task)
+        onCatch()
     }
 
-    private func isConfirmingSave(_ confirming: Bool) {
-        savedTask?.cancel()
-        savedTask = nil
-        model.isConfirmingSave = confirming
-        updatePointerPassthrough()
+    private func endCatch() {
+        catchTask?.cancel()
+        catchTask = nil
+        model.catchOffset = nil
+    }
+
+    // MARK: Pointer
+
+    /// How far the fish is from the lane's center at a given moment.
+    private func fishOffset(at time: TimeInterval = Date.timeIntervalSinceReferenceDate) -> CGFloat {
+        let reduceMotion = NSWorkspace.shared.accessibilityDisplayShouldReduceMotion
+        let still = model.recorderState != .recording || reduceMotion
+        return still ? 0 : SwimmingFish.offset(at: time, travel: SwimmingFish.travel(lane: model.swimLane))
+    }
+
+    /// Whether a click here catches the fish. It also counts where the fish was a moment ago,
+    /// so a click that lands just behind a swimming fish isn't a miss.
+    private func isOverFish(_ point: NSPoint) -> Bool {
+        guard model.recorderState == .recording || model.recorderState == .paused else { return false }
+        let centerY = anchor.y - model.notch.height / 2
+        guard abs(point.y - centerY) <= model.notch.height / 2 + 4 else { return false }
+        let laneCenter = anchor.x + model.offset(for: .compact) + model.notch.width / 2
+        let now = Date.timeIntervalSinceReferenceDate
+        return [0, 0.08, 0.16].contains { lag in
+            abs(point.x - (laneCenter + fishOffset(at: now - lag))) <= Self.catchSlack
+        }
+    }
+
+    /// The visible island, in screen coordinates.
+    private func islandRect() -> NSRect {
+        let size = model.size(for: .compact)
+        let width = size.width + 2 * model.earRadius
+        return NSRect(
+            x: anchor.x + model.offset(for: .compact) - width / 2, y: anchor.y - size.height,
+            width: width, height: size.height
+        )
+    }
+
+    private func mouseDown() {
+        guard isOverFish(NSEvent.mouseLocation) else { return }
+        isPressing = true
+        NSCursor.closedHand.set()
+        cursor = .closedHand
+        catchFish()
+    }
+
+    private func mouseUp() {
+        isPressing = false
+        updatePointer()
+    }
+
+    /// Takes the clicks on the visible island, and shows a grabbing hand over the fish.
+    private func updatePointer() {
+        let point = NSEvent.mouseLocation
+        let overIsland = model.mode == .compact && islandRect().contains(point)
+        if panel.ignoresMouseEvents == overIsland {
+            panel.ignoresMouseEvents = !overIsland
+        }
+
+        let wanted: PointerCursor
+        if !overIsland {
+            wanted = .untouched
+        } else if isPressing && (model.catchOffset != nil || isOverFish(point)) {
+            wanted = .closedHand
+        } else if isOverFish(point) {
+            wanted = .openHand
+        } else {
+            wanted = .arrow
+        }
+
+        switch wanted {
+        // Set on every update while over the fish, so the app below can't take the cursor back.
+        case .openHand: NSCursor.openHand.set()
+        case .closedHand: NSCursor.closedHand.set()
+        case .arrow: if cursor != .arrow { NSCursor.arrow.set() }
+        case .untouched: if cursor != .untouched { NSCursor.arrow.set() }
+        }
+        cursor = wanted
+    }
+
+    /// Checks the pointer often while the island shows: the fish moves even when the mouse doesn't.
+    private func startPointerTimer() {
+        guard pointerTimer == nil else { return }
+        let timer = Timer(timeInterval: 1.0 / 30, repeats: true) { [weak self] _ in
+            Task { @MainActor in
+                guard let self else { return }
+                self.updatePointer()
+                if self.model.mode == .hidden { self.stopPointerTimer() }
+            }
+        }
+        timer.tolerance = 0.01
+        RunLoop.main.add(timer, forMode: .common)
+        pointerTimer = timer
+    }
+
+    private func stopPointerTimer() {
+        pointerTimer?.invalidate()
+        pointerTimer = nil
     }
 
     // MARK: Level meter
@@ -240,82 +308,6 @@ final class IslandController: NSObject {
         model.levels = levels
     }
 
-    // MARK: Hover
-
-    private func islandRect(for mode: IslandModel.Mode) -> NSRect {
-        let size = model.size(for: mode)
-        let width = size.width + 2 * model.earRadius
-        return NSRect(x: anchor.x + model.offset(for: mode) - width / 2, y: anchor.y - size.height, width: width, height: size.height)
-    }
-
-    private func pointerMoved() {
-        let point = NSEvent.mouseLocation
-        let mode = model.mode
-        let overIsland = mode != .hidden && islandRect(for: mode).insetBy(dx: -4, dy: -4).contains(point)
-        let over = overIsland || revealArea.contains(point)
-
-        if model.isHovering {
-            if over {
-                collapseTask?.cancel()
-                collapseTask = nil
-            } else if collapseTask == nil {
-                scheduleCollapse(after: 0.3)
-            }
-        } else if over {
-            expand()
-        }
-        updatePointerPassthrough()
-    }
-
-    private func expand() {
-        collapseTask?.cancel()
-        collapseTask = nil
-        guard !model.isHovering else { return }
-        model.isHovering = true
-        model.inputName = recorder.inputName
-        startHoverTimer()
-        updatePointerPassthrough()
-    }
-
-    private func scheduleCollapse(after delay: TimeInterval) {
-        collapseTask?.cancel()
-        let task = DispatchWorkItem { [weak self] in
-            guard let self else { return }
-            collapseTask = nil
-            let point = NSEvent.mouseLocation
-            guard !islandRect(for: .expanded).contains(point), !revealArea.contains(point) else { return }
-            model.isHovering = false
-            stopHoverTimer()
-            updatePointerPassthrough()
-        }
-        collapseTask = task
-        DispatchQueue.main.asyncAfter(deadline: .now() + delay, execute: task)
-    }
-
-    /// Mouse events can be missed when the pointer leaves quickly, so check while expanded.
-    private func startHoverTimer() {
-        guard hoverTimer == nil else { return }
-        let timer = Timer(timeInterval: 0.25, repeats: true) { [weak self] _ in
-            Task { @MainActor in self?.pointerMoved() }
-        }
-        RunLoop.main.add(timer, forMode: .common)
-        hoverTimer = timer
-    }
-
-    private func stopHoverTimer() {
-        hoverTimer?.invalidate()
-        hoverTimer = nil
-    }
-
-    /// The panel is larger than the island. Let clicks outside the island reach the apps below.
-    private func updatePointerPassthrough() {
-        let mode = model.mode
-        let inside = mode != .hidden && islandRect(for: mode).contains(NSEvent.mouseLocation)
-        if panel.ignoresMouseEvents == inside {
-            panel.ignoresMouseEvents = !inside
-        }
-    }
-
     // MARK: Layout
 
     @objc private func reposition() {
@@ -328,42 +320,63 @@ final class IslandController: NSObject {
            let left = screen.auxiliaryTopLeftArea, let right = screen.auxiliaryTopRightArea {
             // Measure from the left area's edge, so the result doesn't depend on its coordinate origin.
             let center = screen.frame.minX + (left.maxX + right.minX) / 2 - left.minX
-            let height = screen.safeAreaInsets.top
             model.hasNotch = true
-            model.notch = CGSize(width: right.minX - left.maxX, height: height)
+            model.notch = CGSize(width: right.minX - left.maxX, height: screen.safeAreaInsets.top)
             panelTop = screen.frame.maxY
             anchor = NSPoint(x: center, y: panelTop)
-            revealArea = NSRect(x: center - 39, y: panelTop - height - 12, width: 78, height: height + 12)
         } else {
             let menuBarBottom = min(screen.visibleFrame.maxY, screen.frame.maxY - screen.safeAreaInsets.top)
-            let center = screen.frame.midX
             model.hasNotch = false
             model.notch = CGSize(width: 10, height: 30)
             panelTop = menuBarBottom
-            anchor = NSPoint(x: center, y: menuBarBottom - Self.menuBarGap)
-            revealArea = NSRect(x: center - 39, y: menuBarBottom - 12, width: 78, height: 12)
+            anchor = NSPoint(x: screen.frame.midX, y: menuBarBottom - Self.menuBarGap)
         }
 
         let maximum = model.maximumSize
-        let width = maximum.width + 2 * model.earRadius + 2 * Self.shadowMargin
+        // The island is centered on the notch, then shifted right: the window must cover the shift on both sides.
+        let width = maximum.width + 2 * model.earRadius + 2 * abs(model.offset(for: .compact)) + 2 * Self.shadowMargin
         let height = (panelTop - anchor.y) + maximum.height + Self.shadowMargin
         panel.setFrame(
             NSRect(x: anchor.x - width / 2, y: panelTop - height, width: width, height: height),
             display: true
         )
-        updatePointerPassthrough()
     }
 }
 
 private final class IslandPanel: NSPanel {
+    var onMouseDown: () -> Void = {}
+    var onMouseUp: () -> Void = {}
+
     override var canBecomeKey: Bool { false }
     override var canBecomeMain: Bool { false }
     override func constrainFrameRect(_ frameRect: NSRect, to screen: NSScreen?) -> NSRect { frameRect }
+
+    /// The island has no controls of its own: it handles clicks here and swallows the rest.
+    override func sendEvent(_ event: NSEvent) {
+        switch event.type {
+        case .leftMouseDown: onMouseDown()
+        case .leftMouseUp: onMouseUp()
+        case .leftMouseDragged, .rightMouseDown, .rightMouseUp, .rightMouseDragged,
+             .otherMouseDown, .otherMouseUp, .otherMouseDragged, .scrollWheel:
+            break
+        default: super.sendEvent(event)
+        }
+    }
 }
 
-/// Lets a click act on the island's buttons while another app is active.
-private final class IslandHostingView<Content: View>: NSHostingView<Content> {
-    override func acceptsFirstMouse(for event: NSEvent?) -> Bool { true }
+/// Lets a background app change the cursor, so the grabbing hand shows while another app is active.
+/// It's a private CoreGraphics call, looked up at run time: if it's missing, the cursor just stays an arrow.
+private func enableBackgroundCursor() {
+    typealias Connection = @convention(c) () -> Int32
+    typealias SetProperty = @convention(c) (Int32, Int32, CFString, CFTypeRef) -> Int32
+    let everywhere = UnsafeMutableRawPointer(bitPattern: -2) // RTLD_DEFAULT
+    guard let connectionSymbol = dlsym(everywhere, "_CGSDefaultConnection"),
+          let setSymbol = dlsym(everywhere, "CGSSetConnectionProperty")
+    else { return }
+    let connection = unsafeBitCast(connectionSymbol, to: Connection.self)()
+    _ = unsafeBitCast(setSymbol, to: SetProperty.self)(
+        connection, connection, "SetsCursorInBackground" as CFString, kCFBooleanTrue
+    )
 }
 
 // MARK: - Views
@@ -373,7 +386,6 @@ struct IslandView: View {
 
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @Environment(\.colorScheme) private var systemColorScheme
-    @Namespace private var glass
 
     var body: some View {
         let mode = model.mode
@@ -384,8 +396,6 @@ struct IslandView: View {
             .padding(.top, model.hasNotch ? 0 : 6)
             .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
             .environment(\.colorScheme, model.hasNotch ? .dark : systemColorScheme)
-            // The panel never becomes key; draw its controls as active anyway, with their tints.
-            .environment(\.appearsActive, true)
             .animation(animation, value: mode)
             .animation(reduceMotion ? nil : .smooth(duration: 0.12), value: model.levels)
     }
@@ -406,7 +416,6 @@ struct IslandView: View {
             content
                 .background(.black, in: shape)
                 .clipShape(shape)
-                .shadow(color: .black.opacity(mode == .expanded ? 0.32 : 0), radius: 16, y: 6)
         } else {
             let shape = RoundedRectangle(cornerRadius: model.bottomRadius(for: mode), style: .continuous)
             content
@@ -423,162 +432,103 @@ struct IslandView: View {
         case .hidden:
             Color.clear
         case .compact:
-            topRow(leadingWidth: 0, trailingWidth: model.swimLane) { EmptyView() } trailing: { activityIndicator }
-                .transition(contentTransition)
-        case .saved:
-            topRow(leadingWidth: IslandModel.side, trailingWidth: IslandModel.side) {
-                Image(systemName: "checkmark.circle.fill")
-                    .font(.system(size: 15, weight: .semibold))
-                    .foregroundStyle(.green)
-                    .transition(.symbolEffect(.drawOn))
-            } trailing: {
-                Text("Saved")
-                    .font(.system(size: 13, weight: .semibold, design: .rounded))
+            HStack(spacing: 0) {
+                Color.clear.frame(width: model.notch.width)
+                activityIndicator
+                    .frame(width: model.swimLane - 20)
+                    .padding(.horizontal, 10)
             }
-            .transition(contentTransition)
-            .accessibilityElement(children: .combine)
-        case .expanded:
-            VStack(spacing: 0) {
-                if model.showsTopRow {
-                    topRow(leadingWidth: model.swimLane, trailingWidth: model.swimLane) {
-                        EmptyView()
-                    } trailing: {
-                        if model.recorderState != .idle { activityIndicator }
-                    }
-                }
-                controls
-                    .frame(height: IslandModel.rowHeight)
-            }
-            .transition(contentTransition)
+            .frame(height: model.notch.height)
+            .transition(reduceMotion ? .opacity : AnyTransition(.blurReplace))
         }
-    }
-
-    private var contentTransition: AnyTransition {
-        reduceMotion ? .opacity : AnyTransition(.blurReplace)
-    }
-
-    /// Content beside the notch, keeping the middle clear.
-    private func topRow<Leading: View, Trailing: View>(
-        leadingWidth: CGFloat, trailingWidth: CGFloat,
-        @ViewBuilder leading: () -> Leading, @ViewBuilder trailing: () -> Trailing
-    ) -> some View {
-        HStack(spacing: 0) {
-            if leadingWidth > 0 {
-                leading()
-                    .frame(width: leadingWidth - 20, alignment: .leading)
-                    .padding(.leading, 14)
-                    .padding(.trailing, 6)
-            }
-            Color.clear.frame(width: model.notch.width)
-            if trailingWidth > 0 {
-                trailing()
-                    .frame(width: trailingWidth - 20, alignment: .trailing)
-                    .padding(.leading, 6)
-                    .padding(.trailing, 14)
-            }
-        }
-        .frame(height: model.notch.height)
-        .foregroundStyle(.primary)
     }
 
     @ViewBuilder
     private var activityIndicator: some View {
+        if let offset = model.catchOffset, model.recorderState == .idle {
+            CaughtFish(offset: offset, reduceMotion: reduceMotion)
+        } else {
+            liveIndicator
+        }
+    }
+
+    @ViewBuilder
+    private var liveIndicator: some View {
         switch model.recorderState {
         case .requestingPermission:
             ProgressView().controlSize(.mini)
         case .recording, .paused:
-            SwimmingFish(levels: model.levels, isPaused: model.recorderState == .paused, reduceMotion: reduceMotion)
+            SwimmingFish(
+                levels: model.levels, isPaused: model.recorderState == .paused,
+                reduceMotion: reduceMotion, onCatch: model.onCatch
+            )
         case .idle:
             EmptyView()
         }
     }
+}
 
-    // MARK: Expanded controls
+/// The one-second catch animation: the fish pops and wiggles where it was caught, then turns into a checkmark.
+private struct CaughtFish: View {
+    let offset: CGFloat
+    let reduceMotion: Bool
 
-    private var controls: some View {
-        HStack(spacing: 12) {
-            details
-            Spacer(minLength: 8)
-            GlassEffectContainer(spacing: 12) {
-                HStack(spacing: 10) {
-                    if model.recorderState == .idle || model.recorderState == .requestingPermission {
-                        roundButton("folder", label: "Open Recordings Folder", id: "secondary", action: model.onOpenFolder)
-                        roundButton("gearshape", label: "Settings", id: "tertiary", action: model.onSettings)
-                        roundButton("fish", label: "Record", id: "primary", tint: .teal, action: model.onRecord)
-                            .disabled(model.recorderState == .requestingPermission)
-                    } else {
-                        let paused = model.recorderState == .paused
-                        roundButton(paused ? "record.circle" : "pause.fill",
-                                    label: paused ? "Resume" : "Pause", id: "secondary", action: model.onPause)
-                        roundButton("stop.fill", label: "Stop and Save", id: "primary", tint: .red, action: model.onRecord)
-                    }
+    private struct Frame {
+        var scale = 1.0
+        var angle = 0.0
+        var fish = 1.0
+        var check = 0.0
+    }
+
+    var body: some View {
+        if reduceMotion {
+            check(scale: 1).frame(maxWidth: .infinity)
+        } else {
+            KeyframeAnimator(initialValue: Frame()) { frame in
+                ZStack {
+                    Image(systemName: "fish.fill")
+                        .font(.system(size: 15, weight: .semibold))
+                        .foregroundStyle(Color.blue.gradient)
+                        .rotationEffect(.degrees(frame.angle))
+                        .scaleEffect(frame.scale)
+                        .opacity(frame.fish)
+                    check(scale: frame.check)
+                }
+                .frame(maxWidth: .infinity)
+                .offset(x: offset)
+            } keyframes: { _ in
+                KeyframeTrack(\.scale) {
+                    SpringKeyframe(1.7, duration: 0.25, spring: .bouncy)
+                    LinearKeyframe(1.7, duration: 0.2)
+                    CubicKeyframe(0.2, duration: 0.2)
+                    LinearKeyframe(0.2, duration: 0.35)
+                }
+                KeyframeTrack(\.angle) {
+                    CubicKeyframe(-25, duration: 0.1)
+                    CubicKeyframe(25, duration: 0.15)
+                    CubicKeyframe(-15, duration: 0.1)
+                    CubicKeyframe(0, duration: 0.1)
+                    LinearKeyframe(0, duration: 0.55)
+                }
+                KeyframeTrack(\.fish) {
+                    LinearKeyframe(1, duration: 0.5)
+                    CubicKeyframe(0, duration: 0.15)
+                    LinearKeyframe(0, duration: 0.35)
+                }
+                KeyframeTrack(\.check) {
+                    LinearKeyframe(0, duration: 0.5)
+                    SpringKeyframe(1, duration: 0.35, spring: .bouncy)
+                    LinearKeyframe(1, duration: 0.15)
                 }
             }
         }
-        .padding(.leading, 20)
-        .padding(.trailing, 14)
-        .padding(.bottom, model.showsTopRow ? 6 : 0)
     }
 
-    @ViewBuilder
-    private var details: some View {
-        let (title, subtitle) = detailText
-        VStack(alignment: .leading, spacing: 1) {
-            Text(title)
-                .font(.system(size: 14, weight: .semibold))
-                .contentTransition(.interpolate)
-            Text(subtitle)
-                .font(.system(size: 12))
-                .foregroundStyle(.secondary)
-                .lineLimit(1)
-                .truncationMode(.middle)
-        }
-        .overlay {
-            if model.recorderState == .idle, let recording = model.lastRecording {
-                Button { model.onReveal(recording.url) } label: { Color.clear.contentShape(.rect) }
-                    .buttonStyle(.plain)
-                    .help("Show in Finder")
-                    .accessibilityLabel("Show last recording in Finder")
-            }
-        }
-    }
-
-    private var detailText: (String, String) {
-        let microphone = model.inputName ?? "No microphone found"
-        switch model.recorderState {
-        case .idle:
-            if let recording = model.lastRecording {
-                return ("Saved · \(spokenDuration(recording.duration))", recording.url.deletingPathExtension().lastPathComponent)
-            }
-            return ("Ready to record", microphone)
-        case .requestingPermission:
-            return ("Waiting for access", "Allow the microphone when macOS asks")
-        case .recording:
-            return ("Recording", microphone)
-        case .paused:
-            return ("Paused", "Resume to keep adding to this recording")
-        }
-    }
-
-    /// A Liquid Glass control. On the black island, glass alone can't show a tint, so the primary
-    /// action gets a tinted fill and glyph, as Live Activity controls do.
-    private func roundButton(
-        _ symbol: String, label: String, id: String, tint: Color? = nil, action: @escaping () -> Void
-    ) -> some View {
-        Button(action: action) {
-            Image(systemName: symbol)
-                .font(.system(size: 15, weight: .semibold))
-                .contentTransition(.symbolEffect(.replace))
-                .foregroundStyle(tint.map(AnyShapeStyle.init) ?? AnyShapeStyle(.primary))
-                .frame(width: 40, height: 40)
-                .background(tint?.opacity(0.3) ?? .clear, in: .circle)
-                .contentShape(.circle)
-                .glassEffect(.regular.interactive(), in: .circle)
-                .glassEffectID(id, in: glass)
-        }
-        .buttonStyle(.plain)
-        .help(label)
-        .accessibilityLabel(label)
+    private func check(scale: Double) -> some View {
+        Image(systemName: "checkmark.circle.fill")
+            .font(.system(size: 17, weight: .semibold))
+            .foregroundStyle(.green)
+            .scaleEffect(scale)
     }
 }
 
@@ -588,10 +538,19 @@ private struct SwimmingFish: View {
     let levels: [Double]
     let isPaused: Bool
     let reduceMotion: Bool
+    let onCatch: () -> Void
 
     private static let size: CGFloat = 22
     /// Seconds for one lap there and back: at least 8, and longer in a wide lane so the fish doesn't speed up.
     private static func lap(travel: CGFloat) -> Double { max(8, 8 * travel / 47) }
+
+    /// How far the fish swims to each side of the lane's center.
+    static func travel(lane: CGFloat) -> CGFloat { max(0, (lane - 20 - size) / 2) }
+
+    /// The fish's horizontal offset from the lane's center. The island's controller uses it to know where to catch it.
+    static func offset(at time: TimeInterval, travel: CGFloat) -> CGFloat {
+        travel * sin(2 * .pi * time / lap(travel: travel))
+    }
 
     var body: some View {
         let level = levels.suffix(3).reduce(0, +) / 3
@@ -614,9 +573,10 @@ private struct SwimmingFish: View {
                     .rotationEffect(.degrees(tail), anchor: UnitPoint(x: 0.7, y: 0.5))
                     .scaleEffect(x: facing, y: 1)
                     .offset(
-                        x: still ? 0 : travel * sin(angle),
+                        x: still ? 0 : Self.offset(at: time, travel: travel),
                         y: still ? 0 : 1.5 * sin(bob)
                     )
+                    // The fish itself is the button: you have to catch it to stop the recording.
                     .frame(width: proxy.size.width, height: proxy.size.height)
             }
         }
@@ -624,6 +584,9 @@ private struct SwimmingFish: View {
         .animation(.smooth(duration: 0.3), value: isPaused)
         .accessibilityElement()
         .accessibilityLabel(isPaused ? "Paused" : "Recording")
+        .accessibilityHint("Click to stop and save")
+        .accessibilityAddTraits(.isButton)
+        .accessibilityAction(.default, onCatch)
     }
 }
 
@@ -664,11 +627,4 @@ struct IslandShape: Shape {
         path.closeSubpath()
         return path
     }
-}
-
-// MARK: - Formatting
-
-func spokenDuration(_ interval: TimeInterval) -> String {
-    let units: Set<Duration.UnitsFormatStyle.Unit> = interval < 60 ? [.seconds] : [.hours, .minutes]
-    return Duration.seconds(max(0, interval.rounded())).formatted(.units(allowed: units, width: .abbreviated))
 }

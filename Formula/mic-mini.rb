@@ -1,7 +1,7 @@
 class MicMini < Formula
-  desc "Notch voice recorder for your goldfish memory"
+  desc "Menu bar voice recorder for your goldfish memory"
   homepage "https://github.com/flol3622/mic-mini"
-  url "https://github.com/flol3622/mic-mini.git", tag: "v0.2.1"
+  url "https://github.com/flol3622/mic-mini.git", tag: "v0.3.0"
   license "MIT"
   head "https://github.com/flol3622/mic-mini.git", branch: "main"
 
@@ -23,8 +23,10 @@ class MicMini < Formula
     <<~EOS
       Start Mic Mini with:
         mic-mini
-      Then hover at the center of the notch. Mic Mini opens at login from then on;
-      turn that off in its Settings before you uninstall.
+      Then click the fish in the menu bar. Mic Mini opens at login from then on,
+      and adds a launcher to ~/Applications so ⌘Space can find it.
+      Before you uninstall, turn off Open at login in its Settings; afterwards:
+        rm -rf ~/Applications/"Mic Mini.app"
     EOS
   end
 
