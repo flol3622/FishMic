@@ -14,6 +14,8 @@ final class PanelModel {
     var recorderState: MeetingRecorder.State = .idle
     var inputName: String?
     var lastRecording: Recording?
+    /// A finished recording is being converted to MP3.
+    var isExporting = false
 
     @ObservationIgnored var onRecord: () -> Void = {}
     @ObservationIgnored var onPause: () -> Void = {}
@@ -64,6 +66,11 @@ final class MenuBarController: NSObject {
         updateIcon()
     }
 
+    func exportingChanged(_ exporting: Bool) {
+        model.isExporting = exporting
+        updateIcon()
+    }
+
     /// Flashes a checkmark in the menu bar and remembers the recording for the popover.
     func showSaved(_ url: URL, duration: TimeInterval) {
         model.lastRecording = .init(url: url, duration: duration)
@@ -99,6 +106,7 @@ final class MenuBarController: NSObject {
             switch model.recorderState {
             case .recording: (symbol, tint, label) = ("fish.fill", .systemRed, "FishMic, recording")
             case .paused: (symbol, tint, label) = ("pause.circle.fill", nil, "FishMic, paused")
+            case .idle where model.isExporting: (symbol, tint, label) = ("arrow.down.circle", nil, "FishMic, saving MP3")
             case .idle, .requestingPermission: (symbol, tint, label) = ("fish", nil, "FishMic")
             }
         }
@@ -182,7 +190,7 @@ struct PanelView: View {
                 .truncationMode(.middle)
         }
         .overlay {
-            if model.recorderState == .idle, let recording = model.lastRecording {
+            if model.recorderState == .idle, !model.isExporting, let recording = model.lastRecording {
                 Button {
                     model.onReveal(recording.url)
                     model.dismiss()
@@ -198,6 +206,9 @@ struct PanelView: View {
         let microphone = model.inputName ?? "No microphone found"
         switch model.recorderState {
         case .idle:
+            if model.isExporting {
+                return ("Saving MP3…", "Converting the recording")
+            }
             if let recording = model.lastRecording {
                 return ("Saved · \(spokenDuration(recording.duration))", recording.url.deletingPathExtension().lastPathComponent)
             }

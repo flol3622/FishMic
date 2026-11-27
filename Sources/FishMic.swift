@@ -8,6 +8,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private lazy var menuBar = MenuBarController(recorder: recorder)
     private var settingsWindow: SettingsWindow?
     private var isQuitting = false
+    private var waitsForExport = false
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         recorder.onStateChange = { [weak self] state in
@@ -19,6 +20,14 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             menuBar.showSaved(url, duration: duration)
         }
         recorder.onError = { [weak self] message in self?.showError(message) }
+        recorder.onExportingChange = { [weak self] exporting in
+            guard let self else { return }
+            menuBar.exportingChanged(exporting)
+            if !exporting, waitsForExport {
+                waitsForExport = false
+                NSApp.reply(toApplicationShouldTerminate: true)
+            }
+        }
 
         let model = menuBar.model
         model.onRecord = { [weak self] in self?.toggleRecording() }
@@ -44,13 +53,18 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         isQuitting = true
         recorder.stop()
         island.stop()
+        // Let a conversion to MP3 finish first, so the recording isn't left half-converted.
+        if recorder.isExporting {
+            waitsForExport = true
+            return .terminateLater
+        }
         return .terminateNow
     }
 
     private func toggleRecording() {
         switch recorder.state {
         case .idle:
-            recorder.start(in: preferences.directory, bitRate: preferences.bitRate)
+            recorder.start(in: preferences.directory, bitRate: preferences.bitRate, format: preferences.format)
         case .recording, .paused:
             recorder.stop()
         case .requestingPermission:

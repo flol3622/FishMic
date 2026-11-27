@@ -1,13 +1,15 @@
 class Fishmic < Formula
   desc "Menu bar voice recorder for your goldfish memory"
   homepage "https://github.com/flol3622/FishMic"
-  url "https://github.com/flol3622/FishMic.git", tag: "v0.4.0"
+  url "https://github.com/flol3622/FishMic.git", tag: "v0.5.0"
   license "MIT"
   head "https://github.com/flol3622/FishMic.git", branch: "main"
 
+  depends_on "lame"
   depends_on macos: :tahoe
 
   def install
+    ENV["LAME_PREFIX"] = Formula["lame"].opt_prefix
     system "./scripts/build.sh"
     prefix.install "dist/FishMic.app"
 

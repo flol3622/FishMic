@@ -8,6 +8,7 @@ final class Preferences {
     @ObservationIgnored private let defaults = UserDefaults.standard
     private static let directoryKey = "RecordingDirectory"
     private static let bitRateKey = "RecordingBitRate"
+    private static let formatKey = "RecordingFormat"
     private static let opensAtLoginKey = "OpensAtLogin"
 
     var directory: URL {
@@ -16,6 +17,11 @@ final class Preferences {
 
     var bitRate: Int {
         didSet { defaults.set(bitRate, forKey: Self.bitRateKey) }
+    }
+
+    /// MP3 by default: every player and upload form takes it.
+    var format: AudioFormat {
+        didSet { defaults.set(format.rawValue, forKey: Self.formatKey) }
     }
 
     /// Whether FishMic starts when you log in. On by default, so it's back in the notch after a restart.
@@ -32,6 +38,7 @@ final class Preferences {
             directory = music.appendingPathComponent("FishMic", isDirectory: true)
         }
         bitRate = defaults.integer(forKey: Self.bitRateKey) == 48_000 ? 48_000 : 32_000
+        format = defaults.string(forKey: Self.formatKey).flatMap(AudioFormat.init(rawValue:)) ?? .mp3
         opensAtLogin = defaults.object(forKey: Self.opensAtLoginKey) as? Bool ?? true
     }
 
@@ -102,12 +109,19 @@ struct SettingsView: View {
                         .help(preferences.directory.path)
                 }
 
+                Picker("Format", selection: $preferences.format) {
+                    Text("MP3").tag(AudioFormat.mp3)
+                    Text("M4A (AAC)").tag(AudioFormat.m4a)
+                }
+
                 Picker("Audio quality", selection: $preferences.bitRate) {
                     Text("Compact · 32 kbps · ~15 MB/hour").tag(32_000)
                     Text("Higher quality · 48 kbps · ~22 MB/hour").tag(48_000)
                 }
             } footer: {
-                Text("Mono M4A from the current macOS microphone.")
+                Text(preferences.format == .mp3
+                     ? "Mono MP3 from the current macOS microphone, converted when you stop."
+                     : "Mono M4A from the current macOS microphone.")
                     .foregroundStyle(.secondary)
                     .frame(maxWidth: .infinity, alignment: .leading)
             }

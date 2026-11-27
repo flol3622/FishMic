@@ -16,7 +16,7 @@ final class IslandModel {
 
     /// Width of the fish's lane right of the notch. On a notched display it's wide enough to cover
     /// the menu bar next to the notch, where macOS shows its microphone indicator and the nearest tray icons.
-    var swimLane: CGFloat { hasNotch ? 230 : 72 }
+    var swimLane: CGFloat { hasNotch ? 418 : 72 }
 
     var hasNotch = false
     /// The hardware notch, or a small virtual gap on displays without one.
@@ -487,7 +487,7 @@ private struct CaughtFish: View {
             KeyframeAnimator(initialValue: Frame()) { frame in
                 ZStack {
                     Image(systemName: "fish.fill")
-                        .font(.system(size: 15, weight: .semibold))
+                        .font(.system(size: 9, weight: .semibold))
                         .foregroundStyle(Color.blue.gradient)
                         .rotationEffect(.degrees(frame.angle))
                         .scaleEffect(frame.scale)
@@ -567,7 +567,7 @@ private struct SwimmingFish: View {
                 let tail = still ? 0 : (3 + 14 * level) * sin(time * 11)
 
                 Image(systemName: "fish.fill")
-                    .font(.system(size: 15, weight: .semibold))
+                    .font(.system(size: 9, weight: .semibold))
                     .foregroundStyle(isPaused ? AnyShapeStyle(.secondary) : AnyShapeStyle(Color.blue.gradient))
                     .opacity(reduceMotion && !isPaused ? 0.55 + 0.45 * level : 1)
                     .rotationEffect(.degrees(tail), anchor: UnitPoint(x: 0.7, y: 0.5))

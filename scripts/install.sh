@@ -25,15 +25,17 @@ mv "$staging/FishMic.tar.gz" "$tap_source/artifacts/$archive"
 
 cat > "$tap_source/Formula/fishmic.rb" <<EOF
 class Fishmic < Formula
-  desc "Microphone recorder for meetings"
+  desc "Menu bar voice recorder for your goldfish memory"
   homepage "file://#{URI::DEFAULT_PARSER.escape("#{HOMEBREW_LIBRARY}/Taps/fishmic/homebrew-local")}"
   url "#{homepage}/artifacts/$archive"
   version "$version"
   sha256 "$checksum"
 
+  depends_on "lame"
   depends_on macos: :tahoe
 
   def install
+    ENV["LAME_PREFIX"] = Formula["lame"].opt_prefix
     system "./scripts/build.sh"
     prefix.install "dist/FishMic.app"
 
@@ -61,6 +63,13 @@ fi
 brew tap "$tap" "$tap_source"
 git -C "$tap_dir" -c core.hooksPath=/dev/null pull --quiet --ff-only
 brew trust --formula "$formula"
+
+# Homebrew can't hold the same formula from two taps, so swap out the public one.
+installed="$(brew list --formula --full-name | grep -E '(^|/)fishmic$' || true)"
+if [[ -n "$installed" && "$installed" != "$formula" ]]; then
+    printf 'Replacing %s with this checkout\n' "$installed"
+    brew uninstall --formula "$installed"
+fi
 
 action=install
 if brew list --formula "$formula" >/dev/null 2>&1; then

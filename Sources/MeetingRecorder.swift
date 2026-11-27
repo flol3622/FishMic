@@ -1,6 +1,14 @@
 import AVFoundation
 import Foundation
 
+/// The file a recording is saved as.
+enum AudioFormat: String, CaseIterable {
+    /// Plays and uploads anywhere. Recorded as AAC, then converted with LAME when you stop.
+    case mp3
+    /// AAC, written straight to disk.
+    case m4a
+}
+
 @MainActor
 final class MeetingRecorder: NSObject, AVAudioRecorderDelegate {
     enum State: Equatable {
@@ -19,13 +27,25 @@ final class MeetingRecorder: NSObject, AVAudioRecorderDelegate {
     var onStateChange: ((State) -> Void)?
     var onSaved: ((URL, TimeInterval) -> Void)?
     var onError: ((String) -> Void)?
+    /// Called with true while finished recordings are being converted to MP3.
+    var onExportingChange: ((Bool) -> Void)?
+
+    /// Whether any recording is still being converted (for example when the app quits).
+    var isExporting: Bool { exports > 0 }
 
     private var recorder: AVAudioRecorder?
     private var activity: NSObjectProtocol?
     private var interruptionCheck: Timer?
+    private var format: AudioFormat = .mp3
+    private var bitRate = 32_000
+    private var exports = 0 {
+        didSet { if (exports > 0) != (oldValue > 0) { onExportingChange?(exports > 0) } }
+    }
 
-    func start(in directory: URL, bitRate: Int = 32_000) {
+    func start(in directory: URL, bitRate: Int = 32_000, format: AudioFormat = .mp3) {
         guard state == .idle else { return }
+        self.format = format
+        self.bitRate = bitRate
 
         switch AVCaptureDevice.authorizationStatus(for: .audio) {
         case .authorized:
@@ -161,10 +181,32 @@ final class MeetingRecorder: NSObject, AVAudioRecorderDelegate {
         state = .idle
 
         if let file = try? AVAudioFile(forReading: url), file.length > 0 {
-            if let problem {
-                onError?("\(problem) The audio captured so far was saved at:\n\(url.path)")
-            } else {
-                onSaved?(url, Double(file.length) / file.fileFormat.sampleRate)
+            let duration = Double(file.length) / file.fileFormat.sampleRate
+            guard format == .mp3 else {
+                report(url, duration: duration, problem: problem)
+                return
+            }
+            let mp3 = url.deletingPathExtension().appendingPathExtension("mp3")
+            let bitRate = bitRate
+            exports += 1
+            Task.detached(priority: .userInitiated) {
+                let failure: String?
+                do {
+                    try MP3Export.convert(url, to: mp3, bitRate: bitRate)
+                    try? FileManager.default.removeItem(at: url)
+                    failure = nil
+                } catch {
+                    failure = error.localizedDescription
+                }
+                await MainActor.run {
+                    self.exports -= 1
+                    if let failure {
+                        // The AAC recording is untouched, so nothing is lost.
+                        self.onError?("Couldn’t convert the recording to MP3. \(failure) The recording was kept as M4A at:\n\(url.path)")
+                    } else {
+                        self.report(mp3, duration: duration, problem: problem)
+                    }
+                }
             }
         } else if FileManager.default.fileExists(atPath: url.path) {
             let detail = problem ?? "Couldn’t read any audio from this recording."
@@ -174,16 +216,25 @@ final class MeetingRecorder: NSObject, AVAudioRecorderDelegate {
         }
     }
 
+    private func report(_ url: URL, duration: TimeInterval, problem: String?) {
+        if let problem {
+            onError?("\(problem) The audio captured so far was saved at:\n\(url.path)")
+        } else {
+            onSaved?(url, duration)
+        }
+    }
+
+    /// Always AAC while recording; the name is also free as `.mp3`, for the conversion afterwards.
     private func recordingURL(in directory: URL) -> URL {
         let formatter = DateFormatter()
         formatter.locale = Locale(identifier: "en_US_POSIX")
         formatter.dateFormat = "yyyy-MM-dd HH.mm.ss"
-        let name = "Meeting \(formatter.string(from: Date()))"
-        let url = directory.appendingPathComponent("\(name).m4a")
-        if FileManager.default.fileExists(atPath: url.path) {
-            return directory.appendingPathComponent("\(name)-\(UUID().uuidString.prefix(8)).m4a")
+        var name = "Meeting \(formatter.string(from: Date()))"
+        let taken = { (name: String) in
+            ["m4a", "mp3"].contains { FileManager.default.fileExists(atPath: directory.appendingPathComponent("\(name).\($0)").path) }
         }
-        return url
+        if taken(name) { name += "-\(UUID().uuidString.prefix(8))" }
+        return directory.appendingPathComponent("\(name).m4a")
     }
 
     private func reportDeniedPermission() {
